@@ -1,0 +1,20 @@
+# Go build
+bin/
+*.exe
+*.test
+*.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Env files
+.env
+
+# Logs
+logs/
+*.log
+
+# Coverage
+coverage.out
