@@ -1,16 +1,18 @@
-package common
+package common_test
 
 import (
 	"errors"
 	"strings"
 	"testing"
+
+	common "github.com/example/messaging-microservice/internal/adapters/common"
 )
 
 func TestWrapTransient(t *testing.T) {
 	base := errors.New("temporary failure")
-	wrapped := WrapTransient(base)
+	wrapped := common.WrapTransient(base)
 
-	if !errors.Is(wrapped, ErrTransient) {
+	if !errors.Is(wrapped, common.ErrTransient) {
 		t.Fatalf("expected wrapped error to be transient: %v", wrapped)
 	}
 
@@ -21,9 +23,9 @@ func TestWrapTransient(t *testing.T) {
 
 func TestWrapPermanent(t *testing.T) {
 	base := errors.New("invalid recipient")
-	wrapped := WrapPermanent(base)
+	wrapped := common.WrapPermanent(base)
 
-	if !errors.Is(wrapped, ErrPermanent) {
+	if !errors.Is(wrapped, common.ErrPermanent) {
 		t.Fatalf("expected wrapped error to be permanent: %v", wrapped)
 	}
 
@@ -33,10 +35,10 @@ func TestWrapPermanent(t *testing.T) {
 }
 
 func TestWrapNil(t *testing.T) {
-	if !errors.Is(WrapTransient(nil), ErrTransient) {
+	if !errors.Is(common.WrapTransient(nil), common.ErrTransient) {
 		t.Fatalf("expected nil transient wrap to fall back to ErrTransient")
 	}
-	if !errors.Is(WrapPermanent(nil), ErrPermanent) {
+	if !errors.Is(common.WrapPermanent(nil), common.ErrPermanent) {
 		t.Fatalf("expected nil permanent wrap to fall back to ErrPermanent")
 	}
 }

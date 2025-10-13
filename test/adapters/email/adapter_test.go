@@ -1,4 +1,4 @@
-package email
+package email_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog"
 
 	common "github.com/example/messaging-microservice/internal/adapters/common"
+	emailadapter "github.com/example/messaging-microservice/internal/adapters/email"
 	"github.com/example/messaging-microservice/internal/models"
 	emailprovider "github.com/example/messaging-microservice/internal/providers/email"
 	"github.com/example/messaging-microservice/internal/worker"
@@ -16,7 +17,7 @@ import (
 
 func TestAdapterSendSuccess(t *testing.T) {
 	provider := emailprovider.NewMockProvider(zerolog.Nop(), emailprovider.WithRandomSeed(1))
-	adapter, err := NewAdapter(provider, zerolog.Nop())
+	adapter, err := emailadapter.NewAdapter(provider, zerolog.Nop())
 	if err != nil {
 		t.Fatalf("unexpected constructor error: %v", err)
 	}
@@ -51,7 +52,7 @@ func TestAdapterSendSuccess(t *testing.T) {
 
 func TestAdapterSendPermanentFailure(t *testing.T) {
 	provider := emailprovider.NewMockProvider(zerolog.Nop(), emailprovider.WithRandomSeed(1))
-	adapter, err := NewAdapter(provider, zerolog.Nop())
+	adapter, err := emailadapter.NewAdapter(provider, zerolog.Nop())
 	if err != nil {
 		t.Fatalf("unexpected constructor error: %v", err)
 	}
@@ -75,7 +76,7 @@ func TestAdapterSendPermanentFailure(t *testing.T) {
 
 func TestAdapterSendTransientFailure(t *testing.T) {
 	provider := emailprovider.NewMockProvider(zerolog.Nop(), emailprovider.WithRandomSeed(1))
-	adapter, err := NewAdapter(provider, zerolog.Nop())
+	adapter, err := emailadapter.NewAdapter(provider, zerolog.Nop())
 	if err != nil {
 		t.Fatalf("unexpected constructor error: %v", err)
 	}
@@ -99,7 +100,7 @@ func TestAdapterSendTransientFailure(t *testing.T) {
 
 func TestAdapterSendTimeout(t *testing.T) {
 	provider := emailprovider.NewMockProvider(zerolog.Nop(), emailprovider.WithRandomSeed(1))
-	adapter, err := NewAdapter(provider, zerolog.Nop())
+	adapter, err := emailadapter.NewAdapter(provider, zerolog.Nop())
 	if err != nil {
 		t.Fatalf("unexpected constructor error: %v", err)
 	}
@@ -120,7 +121,7 @@ func TestAdapterSendTimeout(t *testing.T) {
 
 func TestAdapterWithInvalidRequestType(t *testing.T) {
 	provider := emailprovider.NewMockProvider(zerolog.Nop(), emailprovider.WithRandomSeed(1))
-	adapter, err := NewAdapter(provider, zerolog.Nop())
+	adapter, err := emailadapter.NewAdapter(provider, zerolog.Nop())
 	if err != nil {
 		t.Fatalf("unexpected constructor error: %v", err)
 	}

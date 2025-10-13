@@ -1,4 +1,4 @@
-package email
+package email_test
 
 import (
 	"context"
@@ -8,17 +8,19 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+
+	emailprovider "github.com/example/messaging-microservice/internal/providers/email"
 )
 
 func TestMockProviderSuccess(t *testing.T) {
 	fixed := time.Date(2025, time.October, 11, 10, 0, 0, 0, time.UTC)
-	provider := NewMockProvider(
+	provider := emailprovider.NewMockProvider(
 		zerolog.Nop(),
-		WithLatencyRange(0, 0),
-		WithClock(func() time.Time { return fixed }),
+		emailprovider.WithLatencyRange(0, 0),
+		emailprovider.WithClock(func() time.Time { return fixed }),
 	)
 
-	payload := &Payload{
+	payload := &emailprovider.Payload{
 		MessageID: "message-123",
 		From:      "noreply@example.com",
 		To:        []string{"user@example.com"},
@@ -47,14 +49,14 @@ func TestMockProviderSuccess(t *testing.T) {
 }
 
 func TestMockProviderScenarioOverrides(t *testing.T) {
-	provider := NewMockProvider(zerolog.Nop(), WithLatencyRange(0, 0))
+	provider := emailprovider.NewMockProvider(zerolog.Nop(), emailprovider.WithLatencyRange(0, 0))
 
-	payload := &Payload{
+	payload := &emailprovider.Payload{
 		MessageID: "message-123",
 		From:      "noreply@example.com",
 		To:        []string{"user@example.com"},
 		Headers: map[string]string{
-			headerScenario: string(ScenarioPermanent),
+			"X-Mock-Provider-Scenario": string(emailprovider.ScenarioPermanent),
 		},
 	}
 
@@ -74,13 +76,13 @@ func TestMockProviderScenarioOverrides(t *testing.T) {
 }
 
 func TestMockProviderTransientScenario(t *testing.T) {
-	provider := NewMockProvider(zerolog.Nop(), WithLatencyRange(0, 0))
-	payload := &Payload{
+	provider := emailprovider.NewMockProvider(zerolog.Nop(), emailprovider.WithLatencyRange(0, 0))
+	payload := &emailprovider.Payload{
 		MessageID: "message-123",
 		From:      "noreply@example.com",
 		To:        []string{"user@example.com"},
 		Headers: map[string]string{
-			headerScenario: string(ScenarioTransient),
+			"X-Mock-Provider-Scenario": string(emailprovider.ScenarioTransient),
 		},
 	}
 
@@ -94,17 +96,17 @@ func TestMockProviderTransientScenario(t *testing.T) {
 }
 
 func TestMockProviderTimeoutScenario(t *testing.T) {
-	provider := NewMockProvider(
+	provider := emailprovider.NewMockProvider(
 		zerolog.Nop(),
-		WithLatencyRange(10*time.Millisecond, 10*time.Millisecond),
+		emailprovider.WithLatencyRange(10*time.Millisecond, 10*time.Millisecond),
 	)
 
-	payload := &Payload{
+	payload := &emailprovider.Payload{
 		MessageID: "message-123",
 		From:      "noreply@example.com",
 		To:        []string{"user@example.com"},
 		Headers: map[string]string{
-			headerScenario: string(ScenarioTimeout),
+			"X-Mock-Provider-Scenario": string(emailprovider.ScenarioTimeout),
 		},
 	}
 
@@ -118,14 +120,14 @@ func TestMockProviderTimeoutScenario(t *testing.T) {
 }
 
 func TestMockProviderLatencyHeaderOverride(t *testing.T) {
-	provider := NewMockProvider(zerolog.Nop(), WithLatencyRange(0, 0))
+	provider := emailprovider.NewMockProvider(zerolog.Nop(), emailprovider.WithLatencyRange(0, 0))
 
-	payload := &Payload{
+	payload := &emailprovider.Payload{
 		MessageID: "message-123",
 		From:      "noreply@example.com",
 		To:        []string{"user@example.com"},
 		Headers: map[string]string{
-			headerLatency: "15ms",
+			"X-Mock-Provider-Latency": "15ms",
 		},
 	}
 
@@ -140,13 +142,13 @@ func TestMockProviderLatencyHeaderOverride(t *testing.T) {
 }
 
 func TestMockProviderDefaultScenarioOption(t *testing.T) {
-	provider := NewMockProvider(
+	provider := emailprovider.NewMockProvider(
 		zerolog.Nop(),
-		WithLatencyRange(0, 0),
-		WithDefaultScenario(ScenarioPermanent),
+		emailprovider.WithLatencyRange(0, 0),
+		emailprovider.WithDefaultScenario(emailprovider.ScenarioPermanent),
 	)
 
-	payload := &Payload{
+	payload := &emailprovider.Payload{
 		MessageID: "message-123",
 		From:      "noreply@example.com",
 		To:        []string{"user@example.com"},
@@ -159,13 +161,13 @@ func TestMockProviderDefaultScenarioOption(t *testing.T) {
 }
 
 func TestMockProviderRandomSeedDeterminism(t *testing.T) {
-	provider := NewMockProvider(
+	provider := emailprovider.NewMockProvider(
 		zerolog.Nop(),
-		WithLatencyRange(0, 0),
-		WithRandomSeed(42),
+		emailprovider.WithLatencyRange(0, 0),
+		emailprovider.WithRandomSeed(42),
 	)
 
-	payload := &Payload{
+	payload := &emailprovider.Payload{
 		From: "noreply@example.com",
 		To:   []string{"user@example.com"},
 	}
@@ -186,13 +188,13 @@ func TestMockProviderRandomSeedDeterminism(t *testing.T) {
 }
 
 func TestMockProviderPayloadValidation(t *testing.T) {
-	provider := NewMockProvider(zerolog.Nop())
+	provider := emailprovider.NewMockProvider(zerolog.Nop())
 
 	if _, err := provider.Send(context.Background(), nil); err == nil {
 		t.Fatalf("expected error for nil payload")
 	}
 
-	payload := &Payload{
+	payload := &emailprovider.Payload{
 		MessageID: "message-123",
 		From:      "noreply@example.com",
 	}
