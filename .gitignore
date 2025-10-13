@@ -1,5 +1,6 @@
 # Go build
 bin/
+.gocache/
 *.exe
 *.test
 *.out
