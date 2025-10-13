@@ -41,7 +41,7 @@ func main() {
 		"TWILIO_ACCOUNT_SID":       "test_sid",
 		"TWILIO_AUTH_TOKEN":        "test_token",
 		"TWILIO_PHONE_NUMBER":      "+10000000000",
-		"PROVIDER_TIMEOUT_SECONDS": "5",
+		"PROVIDER_TIMEOUT_SECONDS": "10",
 	}
 
 	for key, value := range requiredEnv {

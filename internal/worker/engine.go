@@ -2,6 +2,8 @@ package worker
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -14,6 +16,7 @@ import (
 	"golang.org/x/sync/semaphore"
 
 	common "github.com/example/messaging-microservice/internal/adapters/common"
+	"github.com/example/messaging-microservice/internal/models"
 )
 
 // Config contains the runtime settings the worker engine relies on to
@@ -38,6 +41,8 @@ type Record struct {
 	Value     []byte
 	Timestamp time.Time
 	Headers   map[string][]byte
+
+	commitFn func(context.Context) error
 }
 
 // Clone returns a deep copy of the record so it can be safely shared with
@@ -53,8 +58,22 @@ func (r *Record) Clone() *Record {
 	if len(r.Headers) > 0 {
 		clone.Headers = cloneHeaders(r.Headers)
 	}
+	clone.commitFn = r.commitFn
 
 	return &clone
+}
+
+func (r *Record) setCommitFn(fn func(context.Context) error) {
+	r.commitFn = fn
+}
+
+// Commit invokes the bound commit function for the record. It returns an error
+// when no commit function has been attached.
+func (r *Record) Commit(ctx context.Context) error {
+	if r.commitFn == nil {
+		return errors.New("worker: commit function not configured for record")
+	}
+	return r.commitFn(ctx)
 }
 
 // ValidatedMessage captures the canonical representation of a request after it
@@ -127,20 +146,28 @@ type Validator interface {
 }
 
 // StatusPublisher publishes lifecycle updates for a message (queued, attempt,
-// sent, failed, etc.). Implementations are expected to marshal the supplied
-// event into the canonical StatusEvent model defined in the design document.
+// sent, failed, etc.). Implementations receive a fully populated models.StatusEvent.
 type StatusPublisher interface {
-	PublishStatus(ctx context.Context, msg *ValidatedMessage, event StatusEvent) error
+	PublishStatus(ctx context.Context, event models.StatusEvent) error
 }
 
-// DLQPublisher writes failed messages to the channel DLQ topic.
+// DLQPublisher writes failed messages to the channel DLQ topic using the canonical model.
 type DLQPublisher interface {
-	PublishDLQ(ctx context.Context, msg *ValidatedMessage, payload DLQPayload) error
+	PublishDLQ(ctx context.Context, record models.DLQRecord) error
 }
 
 // Committer is the abstraction for committing Kafka offsets after processing.
 type Committer interface {
 	Commit(ctx context.Context, record *Record) error
+}
+
+// CommitFunc adapts a function so it satisfies the Committer interface.
+type CommitFunc func(ctx context.Context, record *Record) error
+
+// Commit executes the wrapped function. It allows callers to provide simple
+// closure based committers without defining a new type.
+func (f CommitFunc) Commit(ctx context.Context, record *Record) error {
+	return f(ctx, record)
 }
 
 // Dependencies collects the runtime collaborators required by the engine.
@@ -440,13 +467,28 @@ func (e *Engine) wait(ctx context.Context, d time.Duration) bool {
 }
 
 func (e *Engine) publishStatus(ctx context.Context, msg *ValidatedMessage, event StatusEvent) {
-	if event.Timestamp.IsZero() {
-		event.Timestamp = e.now()
-	}
 	if e.statusPublisher == nil || msg == nil {
 		return
 	}
-	if err := e.statusPublisher.PublishStatus(ctx, msg, event); err != nil {
+	if event.Timestamp.IsZero() {
+		event.Timestamp = e.now()
+	}
+
+	status := models.StatusEvent{
+		MessageID: msg.MessageID,
+		Channel:   msg.Channel,
+		EventType: event.Type,
+		Attempt:   event.Attempt,
+		Error:     event.Error,
+		TraceID:   msg.TraceID,
+		Timestamp: event.Timestamp,
+	}
+
+	if event.ProviderResponse != nil {
+		status.ProviderResponse = toModelProviderResponse(event.ProviderResponse)
+	}
+
+	if err := e.statusPublisher.PublishStatus(ctx, status); err != nil {
 		e.logger.Error().
 			Str("channel", msg.Channel).
 			Str("message_id", msg.MessageID).
@@ -466,7 +508,31 @@ func (e *Engine) publishDLQ(ctx context.Context, msg *ValidatedMessage, payload 
 	if e.dlqPublisher == nil || msg == nil {
 		return
 	}
-	if err := e.dlqPublisher.PublishDLQ(ctx, msg, payload); err != nil {
+	var original any
+	raw := cloneBytes(msg.RawPayload)
+	switch {
+	case len(raw) == 0:
+		original = nil
+	case json.Valid(raw):
+		original = json.RawMessage(raw)
+	default:
+		original = base64.StdEncoding.EncodeToString(raw)
+	}
+
+	record := models.DLQRecord{
+		MessageID:       msg.MessageID,
+		Channel:         msg.Channel,
+		OriginalMessage: original,
+		Attempts:        payload.Attempts,
+		FailureType:     string(payload.FailureType),
+		LastError:       payload.LastError,
+		FirstFailedAt:   payload.FirstFailedAt,
+		LastAttemptAt:   payload.LastAttemptAt,
+		TraceID:         msg.TraceID,
+		Meta:            metadataToStringMap(msg.Metadata),
+	}
+
+	if err := e.dlqPublisher.PublishDLQ(ctx, record); err != nil {
 		e.logger.Error().
 			Str("channel", msg.Channel).
 			Str("message_id", msg.MessageID).
@@ -518,4 +584,48 @@ func cloneHeaders(headers map[string][]byte) map[string][]byte {
 		clone[k] = cloneBytes(v)
 	}
 	return clone
+}
+
+func toModelProviderResponse(resp *common.ProviderResponse) *models.ProviderResponse {
+	if resp == nil {
+		return nil
+	}
+	return &models.ProviderResponse{
+		Status:  resp.Status,
+		Code:    resp.Code,
+		Message: resp.Message,
+		Raw:     resp.Raw,
+		Meta:    copyStringMap(resp.Meta),
+	}
+}
+
+func metadataToStringMap(meta map[string]any) map[string]string {
+	if len(meta) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(meta))
+	for k, v := range meta {
+		switch val := v.(type) {
+		case string:
+			out[k] = val
+		case fmt.Stringer:
+			out[k] = val.String()
+		case []byte:
+			out[k] = string(val)
+		default:
+			out[k] = fmt.Sprint(val)
+		}
+	}
+	return out
+}
+
+func copyStringMap(src map[string]string) map[string]string {
+	if len(src) == 0 {
+		return nil
+	}
+	dst := make(map[string]string, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }
