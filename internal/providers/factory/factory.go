@@ -36,10 +36,19 @@ func Email(cfg config.ProviderConfig, logger zerolog.Logger) (emailprovider.Prov
 	}
 }
 
-// SMS constructs the configured SMS provider. Currently only the mock backend is supported.
+// SMS constructs the configured SMS provider. Supports mock and Twilio backends.
 func SMS(cfg config.ProviderConfig, logger zerolog.Logger) (smsprovider.Provider, error) {
 	backend := normalize(cfg.SMSProvider, "mock")
 	switch backend {
+	case "twilio":
+		provider, err := smsprovider.NewTwilioProvider(cfg.Twilio, logger)
+		if err != nil {
+			return nil, fmt.Errorf("factory: twilio sms provider init: %w", err)
+		}
+		logger.Info().
+			Str("backend", "twilio").
+			Msg("sms provider initialised")
+		return provider, nil
 	case "mock":
 		provider := smsprovider.NewMockProvider(logger)
 		logger.Info().
@@ -51,10 +60,19 @@ func SMS(cfg config.ProviderConfig, logger zerolog.Logger) (smsprovider.Provider
 	}
 }
 
-// WhatsApp constructs the configured WhatsApp provider. Currently only the mock backend is supported.
+// WhatsApp constructs the configured WhatsApp provider. Supports mock and Twilio backends.
 func WhatsApp(cfg config.ProviderConfig, logger zerolog.Logger) (waprovider.Provider, error) {
 	backend := normalize(cfg.WhatsAppProvider, "mock")
 	switch backend {
+	case "twilio":
+		provider, err := waprovider.NewTwilioProvider(cfg.Twilio, logger)
+		if err != nil {
+			return nil, fmt.Errorf("factory: twilio whatsapp provider init: %w", err)
+		}
+		logger.Info().
+			Str("backend", "twilio").
+			Msg("whatsapp provider initialised")
+		return provider, nil
 	case "mock":
 		provider := waprovider.NewMockProvider(logger)
 		logger.Info().
