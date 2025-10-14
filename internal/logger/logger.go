@@ -9,6 +9,8 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const simpleTimeFormat = "02-01-2006 15:04:05"
+
 // New constructs a zerolog logger according to the runtime environment.
 // Development environments receive human readable console logs while other
 // environments emit JSON for easy ingestion.
@@ -18,14 +20,14 @@ func New(env, level string, writers ...io.Writer) (*zerolog.Logger, error) {
 		return nil, err
 	}
 	zerolog.SetGlobalLevel(lvl)
-	zerolog.TimeFieldFormat = time.RFC3339Nano
+	zerolog.TimeFieldFormat = simpleTimeFormat
 	zerolog.DurationFieldUnit = time.Millisecond
 
 	var output io.Writer
 	if len(writers) > 0 {
 		output = io.MultiWriter(writers...)
 	} else if strings.EqualFold(env, "development") || strings.EqualFold(env, "dev") {
-		cw := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339Nano}
+		cw := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: simpleTimeFormat}
 		cw.FieldsExclude = []string{zerolog.TimestampFieldName}
 		output = cw
 	} else {
