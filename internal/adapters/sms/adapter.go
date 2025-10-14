@@ -2,10 +2,12 @@ package sms
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -95,9 +97,15 @@ func (a *Adapter) Send(ctx context.Context, msg *common.ValidatedMessage) (*comm
 }
 
 func (a *Adapter) buildPayload(req *models.SMSRequest, msg *common.ValidatedMessage) *smsprovider.Payload {
-	meta := map[string]string{
-		"trace_id":  req.TraceID,
-		"tenant_id": req.TenantID,
+	meta := map[string]string{}
+	if req.MessageID != "" {
+		meta["message_id"] = req.MessageID
+	}
+	if strings.TrimSpace(req.TraceID) != "" {
+		meta["trace_id"] = req.TraceID
+	}
+	if strings.TrimSpace(req.TenantID) != "" {
+		meta["tenant_id"] = req.TenantID
 	}
 	if msg != nil {
 		for key, value := range msg.Metadata {
@@ -105,7 +113,16 @@ func (a *Adapter) buildPayload(req *models.SMSRequest, msg *common.ValidatedMess
 				meta[key] = strVal
 			}
 		}
+		for key, val := range msg.KafkaHeaders {
+			if len(val) > 0 {
+				meta[key] = string(val)
+			}
+		}
 	}
+	if len(meta) == 0 {
+		meta = nil
+	}
+
 	return &smsprovider.Payload{
 		MessageID: req.MessageID,
 		From:      req.From,
@@ -138,7 +155,7 @@ func (a *Adapter) buildSuccessResponse(raw *smsprovider.RawResponse) *common.Pro
 	}
 
 	return &common.ProviderResponse{
-		Status:  "sent",
+		Status:  "ok",
 		Message: "sent",
 		Code:    codePtr,
 		Raw:     a.truncateRaw(raw),
@@ -186,6 +203,16 @@ func (a *Adapter) truncateRaw(raw *smsprovider.RawResponse) string {
 
 func classifySMSError(raw *smsprovider.RawResponse, err error) string {
 	if raw != nil {
+		if code, ok := extractTwilioErrorCode(raw.Body); ok {
+			switch code {
+			case 21610, 21612, 21614, 21211:
+				return "rejected"
+			case 30001, 30002, 30003, 30005:
+				return "rate_limited"
+			}
+		}
+	}
+	if raw != nil {
 		lowerStatus := strings.ToLower(raw.Status)
 		if strings.Contains(lowerStatus, "permanent") || strings.Contains(lowerStatus, "invalid") {
 			return "rejected"
@@ -220,6 +247,16 @@ func classifySMSError(raw *smsprovider.RawResponse, err error) string {
 
 func wrapSMSError(raw *smsprovider.RawResponse, err error) error {
 	if raw != nil {
+		if code, ok := extractTwilioErrorCode(raw.Body); ok {
+			switch code {
+			case 21610, 21612, 21614, 21211:
+				return common.WrapPermanent(err)
+			case 30001, 30002, 30003, 30005:
+				return common.WrapTransient(err)
+			}
+		}
+	}
+	if raw != nil {
 		lowerStatus := strings.ToLower(raw.Status)
 		if strings.Contains(lowerStatus, "permanent") || strings.Contains(lowerStatus, "invalid") {
 			return common.WrapPermanent(err)
@@ -252,4 +289,33 @@ func optionalInt(code int) *int {
 	}
 	c := code
 	return &c
+}
+
+func extractTwilioErrorCode(body string) (int, bool) {
+	if strings.TrimSpace(body) == "" {
+		return 0, false
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(body), &payload); err != nil {
+		return 0, false
+	}
+
+	val, ok := payload["code"]
+	if !ok {
+		return 0, false
+	}
+
+	switch v := val.(type) {
+	case float64:
+		return int(v), true
+	case string:
+		parsed, err := strconv.Atoi(strings.TrimSpace(v))
+		if err != nil {
+			return 0, false
+		}
+		return parsed, true
+	default:
+		return 0, false
+	}
 }

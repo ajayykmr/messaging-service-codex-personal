@@ -27,8 +27,8 @@ func TestAdapterSendSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected send error: %v", err)
 	}
-	if resp.Status != "sent" {
-		t.Fatalf("expected status sent, got %s", resp.Status)
+	if resp.Status != "ok" {
+		t.Fatalf("expected status ok, got %s", resp.Status)
 	}
 	if resp.Code == nil || *resp.Code != 200 {
 		t.Fatalf("expected provider code 200, got %+v", resp.Code)

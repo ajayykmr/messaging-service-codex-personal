@@ -8,6 +8,23 @@ import (
 	"github.com/example/messaging-microservice/internal/config"
 )
 
+func setCommonRequiredEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("KAFKA_BROKERS", "broker-a:9092")
+	t.Setenv("KAFKA_EMAIL_REQUEST_TOPIC", "email.request")
+	t.Setenv("KAFKA_EMAIL_STATUS_TOPIC", "email.status")
+	t.Setenv("KAFKA_EMAIL_DLQ_TOPIC", "email.dlq")
+	t.Setenv("KAFKA_SMS_REQUEST_TOPIC", "sms.request")
+	t.Setenv("KAFKA_SMS_STATUS_TOPIC", "sms.status")
+	t.Setenv("KAFKA_SMS_DLQ_TOPIC", "sms.dlq")
+	t.Setenv("KAFKA_WHATSAPP_REQUEST_TOPIC", "wa.request")
+	t.Setenv("KAFKA_WHATSAPP_STATUS_TOPIC", "wa.status")
+	t.Setenv("KAFKA_WHATSAPP_DLQ_TOPIC", "wa.dlq")
+	t.Setenv("EMAIL_CONSUMER_GROUP", "email-consumer")
+	t.Setenv("SMS_CONSUMER_GROUP", "sms-consumer")
+	t.Setenv("WHATSAPP_CONSUMER_GROUP", "wa-consumer")
+}
+
 func TestLoadSuccess(t *testing.T) {
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("APP_PORT", "9000")
@@ -74,19 +91,7 @@ func TestLoadMockProviders(t *testing.T) {
 	t.Setenv("EMAIL_PROVIDER", "mock")
 	t.Setenv("SMS_PROVIDER", "mock")
 	t.Setenv("WHATSAPP_PROVIDER", "mock")
-	t.Setenv("KAFKA_BROKERS", "broker-a:9092")
-	t.Setenv("KAFKA_EMAIL_REQUEST_TOPIC", "email.request")
-	t.Setenv("KAFKA_EMAIL_STATUS_TOPIC", "email.status")
-	t.Setenv("KAFKA_EMAIL_DLQ_TOPIC", "email.dlq")
-	t.Setenv("KAFKA_SMS_REQUEST_TOPIC", "sms.request")
-	t.Setenv("KAFKA_SMS_STATUS_TOPIC", "sms.status")
-	t.Setenv("KAFKA_SMS_DLQ_TOPIC", "sms.dlq")
-	t.Setenv("KAFKA_WHATSAPP_REQUEST_TOPIC", "wa.request")
-	t.Setenv("KAFKA_WHATSAPP_STATUS_TOPIC", "wa.status")
-	t.Setenv("KAFKA_WHATSAPP_DLQ_TOPIC", "wa.dlq")
-	t.Setenv("EMAIL_CONSUMER_GROUP", "email-consumer")
-	t.Setenv("SMS_CONSUMER_GROUP", "sms-consumer")
-	t.Setenv("WHATSAPP_CONSUMER_GROUP", "wa-consumer")
+	setCommonRequiredEnv(t)
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -140,5 +145,73 @@ func TestLoadMissingRequired(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "KAFKA_BROKERS is required") {
 		t.Fatalf("expected error message to mention missing brokers, got %q", err.Error())
+	}
+}
+
+func TestLoadSMSProviderTwilioRequiresCredentials(t *testing.T) {
+	t.Setenv("SMS_PROVIDER", "twilio")
+	setCommonRequiredEnv(t)
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatalf("expected error when twilio credentials missing")
+	}
+
+	msg := err.Error()
+	if !strings.Contains(msg, "TWILIO_ACCOUNT_SID is required") {
+		t.Fatalf("expected error about missing TWILIO_ACCOUNT_SID, got %q", msg)
+	}
+	if !strings.Contains(msg, "TWILIO_AUTH_TOKEN is required") {
+		t.Fatalf("expected error about missing TWILIO_AUTH_TOKEN, got %q", msg)
+	}
+	if !strings.Contains(msg, "TWILIO_PHONE_NUMBER is required") {
+		t.Fatalf("expected error about missing TWILIO_PHONE_NUMBER, got %q", msg)
+	}
+}
+
+func TestLoadWhatsAppProviderTwilioRequiresCredentials(t *testing.T) {
+	t.Setenv("WHATSAPP_PROVIDER", "twilio")
+	setCommonRequiredEnv(t)
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatalf("expected error when twilio credentials missing for whatsapp")
+	}
+
+	msg := err.Error()
+	if !strings.Contains(msg, "TWILIO_ACCOUNT_SID is required") {
+		t.Fatalf("expected error about missing TWILIO_ACCOUNT_SID, got %q", msg)
+	}
+	if !strings.Contains(msg, "TWILIO_AUTH_TOKEN is required") {
+		t.Fatalf("expected error about missing TWILIO_AUTH_TOKEN, got %q", msg)
+	}
+	if !strings.Contains(msg, "TWILIO_PHONE_NUMBER is required") {
+		t.Fatalf("expected error about missing TWILIO_PHONE_NUMBER, got %q", msg)
+	}
+}
+
+func TestLoadInvalidSMSProvider(t *testing.T) {
+	setCommonRequiredEnv(t)
+	t.Setenv("SMS_PROVIDER", "invalid")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatalf("expected error when sms provider invalid")
+	}
+	if !strings.Contains(err.Error(), "SMS_PROVIDER must be one of") {
+		t.Fatalf("expected sms provider validation error, got %q", err.Error())
+	}
+}
+
+func TestLoadInvalidWhatsAppProvider(t *testing.T) {
+	setCommonRequiredEnv(t)
+	t.Setenv("WHATSAPP_PROVIDER", "invalid")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatalf("expected error when whatsapp provider invalid")
+	}
+	if !strings.Contains(err.Error(), "WHATSAPP_PROVIDER must be one of") {
+		t.Fatalf("expected whatsapp provider validation error, got %q", err.Error())
 	}
 }

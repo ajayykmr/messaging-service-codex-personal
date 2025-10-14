@@ -2,9 +2,11 @@ package whatsapp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -94,9 +96,15 @@ func (a *Adapter) Send(ctx context.Context, msg *common.ValidatedMessage) (*comm
 }
 
 func (a *Adapter) buildPayload(req *models.WhatsAppRequest, msg *common.ValidatedMessage) *waprovider.Payload {
-	meta := map[string]string{
-		"trace_id":  req.TraceID,
-		"tenant_id": req.TenantID,
+	meta := map[string]string{}
+	if req.MessageID != "" {
+		meta["message_id"] = req.MessageID
+	}
+	if strings.TrimSpace(req.TraceID) != "" {
+		meta["trace_id"] = req.TraceID
+	}
+	if strings.TrimSpace(req.TenantID) != "" {
+		meta["tenant_id"] = req.TenantID
 	}
 	if msg != nil {
 		for key, value := range msg.Metadata {
@@ -104,7 +112,16 @@ func (a *Adapter) buildPayload(req *models.WhatsAppRequest, msg *common.Validate
 				meta[key] = strVal
 			}
 		}
+		for key, val := range msg.KafkaHeaders {
+			if len(val) > 0 {
+				meta[key] = string(val)
+			}
+		}
 	}
+	if len(meta) == 0 {
+		meta = nil
+	}
+
 	return &waprovider.Payload{
 		MessageID: req.MessageID,
 		From:      req.From,
@@ -138,7 +155,7 @@ func (a *Adapter) buildSuccessResponse(raw *waprovider.RawResponse) *common.Prov
 	}
 
 	return &common.ProviderResponse{
-		Status:  "sent",
+		Status:  "ok",
 		Message: "sent",
 		Code:    codePtr,
 		Raw:     a.truncateRaw(raw),
@@ -186,6 +203,16 @@ func (a *Adapter) truncateRaw(raw *waprovider.RawResponse) string {
 
 func classifyWhatsAppError(raw *waprovider.RawResponse, err error) string {
 	if raw != nil {
+		if code, ok := extractTwilioErrorCode(raw.Body); ok {
+			switch code {
+			case 21610, 21612, 21614, 21211:
+				return "rejected"
+			case 63018, 63016, 63015, 63002, 30001, 30003:
+				return "rate_limited"
+			}
+		}
+	}
+	if raw != nil {
 		lowerStatus := strings.ToLower(raw.Status)
 		if strings.Contains(lowerStatus, "permanent") || strings.Contains(lowerStatus, "invalid") {
 			return "rejected"
@@ -213,6 +240,16 @@ func classifyWhatsAppError(raw *waprovider.RawResponse, err error) string {
 }
 
 func wrapWhatsAppError(raw *waprovider.RawResponse, err error) error {
+	if raw != nil {
+		if code, ok := extractTwilioErrorCode(raw.Body); ok {
+			switch code {
+			case 21610, 21612, 21614, 21211:
+				return common.WrapPermanent(err)
+			case 63018, 63016, 63015, 63002, 30001, 30003:
+				return common.WrapTransient(err)
+			}
+		}
+	}
 	if raw != nil {
 		lowerStatus := strings.ToLower(raw.Status)
 		if strings.Contains(lowerStatus, "permanent") || strings.Contains(lowerStatus, "invalid") {
@@ -246,4 +283,33 @@ func optionalInt(code int) *int {
 	}
 	c := code
 	return &c
+}
+
+func extractTwilioErrorCode(body string) (int, bool) {
+	if strings.TrimSpace(body) == "" {
+		return 0, false
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(body), &payload); err != nil {
+		return 0, false
+	}
+
+	val, ok := payload["code"]
+	if !ok {
+		return 0, false
+	}
+
+	switch v := val.(type) {
+	case float64:
+		return int(v), true
+	case string:
+		parsed, err := strconv.Atoi(strings.TrimSpace(v))
+		if err != nil {
+			return 0, false
+		}
+		return parsed, true
+	default:
+		return 0, false
+	}
 }
