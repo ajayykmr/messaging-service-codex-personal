@@ -79,18 +79,7 @@ func (r *Record) Commit(ctx context.Context) error {
 // ValidatedMessage captures the canonical representation of a request after it
 // has passed validation. The adapter receives this structure when sending to an
 // upstream provider, and the publishers use it to enrich status/DLQ events.
-type ValidatedMessage struct {
-	Channel      string
-	MessageID    string
-	TraceID      string
-	TenantID     string
-	CreatedAt    time.Time
-	Metadata     map[string]any
-	Request      any
-	RawPayload   []byte
-	Key          []byte
-	KafkaHeaders map[string][]byte
-}
+type ValidatedMessage = common.ValidatedMessage
 
 // StatusEvent describes a lifecycle update that should be emitted for a
 // message. Each event references the attempt count along with provider
@@ -131,13 +120,6 @@ type DLQPayload struct {
 	LastAttemptAt time.Time
 }
 
-// Adapter defines the behaviour required from channel adapters. Adapters are
-// responsible for converting the domain model into provider specific payloads
-// and returning a normalized ProviderResponse alongside error classification.
-type Adapter interface {
-	Send(ctx context.Context, msg *ValidatedMessage) (*common.ProviderResponse, error)
-}
-
 // Validator parses and validates inbound Kafka records for a channel. It should
 // return a ValidatedMessage describing the request. When a validation error is
 // encountered the returned message may be nil or partially populated.
@@ -172,7 +154,7 @@ func (f CommitFunc) Commit(ctx context.Context, record *Record) error {
 
 // Dependencies collects the runtime collaborators required by the engine.
 type Dependencies struct {
-	Adapter         Adapter
+    Adapter         common.Adapter
 	Validator       Validator
 	StatusPublisher StatusPublisher
 	DLQPublisher    DLQPublisher
@@ -184,8 +166,8 @@ type Dependencies struct {
 // Engine orchestrates validation, retries, backoff, DLQ handling and offset
 // commits for inbound Kafka records in accordance with the detailed design.
 type Engine struct {
-	cfg             Config
-	adapter         Adapter
+    cfg             Config
+    adapter         common.Adapter
 	validator       Validator
 	statusPublisher StatusPublisher
 	dlqPublisher    DLQPublisher

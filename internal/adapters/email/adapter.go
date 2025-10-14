@@ -16,7 +16,6 @@ import (
 	common "github.com/example/messaging-microservice/internal/adapters/common"
 	"github.com/example/messaging-microservice/internal/models"
 	emailprovider "github.com/example/messaging-microservice/internal/providers/email"
-	"github.com/example/messaging-microservice/internal/worker"
 )
 
 var smtpErrPattern = regexp.MustCompile(`smtp\s+(\d{3})`)
@@ -70,7 +69,7 @@ func NewAdapter(provider emailprovider.Provider, logger zerolog.Logger, opts ...
 // send operation to the configured provider. Errors are wrapped with sentinel
 // markers so the worker can distinguish between transient and permanent
 // failures.
-func (a *Adapter) Send(ctx context.Context, msg *worker.ValidatedMessage) (*common.ProviderResponse, error) {
+func (a *Adapter) Send(ctx context.Context, msg *common.ValidatedMessage) (*common.ProviderResponse, error) {
 	if msg == nil || msg.Request == nil {
 		return nil, common.WrapPermanent(errors.New("email adapter: message request is nil"))
 	}
@@ -105,7 +104,7 @@ func (a *Adapter) Send(ctx context.Context, msg *worker.ValidatedMessage) (*comm
 	return resp, nil
 }
 
-func (a *Adapter) buildPayload(req *models.EmailRequest, msg *worker.ValidatedMessage) *emailprovider.Payload {
+func (a *Adapter) buildPayload(req *models.EmailRequest, msg *common.ValidatedMessage) *emailprovider.Payload {
 	headers := map[string]string{
 		"Message-ID": req.MessageID,
 	}

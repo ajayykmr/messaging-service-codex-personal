@@ -12,7 +12,6 @@ import (
 	emailadapter "github.com/example/messaging-microservice/internal/adapters/email"
 	"github.com/example/messaging-microservice/internal/models"
 	emailprovider "github.com/example/messaging-microservice/internal/providers/email"
-	"github.com/example/messaging-microservice/internal/worker"
 )
 
 func TestAdapterSendSuccess(t *testing.T) {
@@ -126,13 +125,13 @@ func TestAdapterWithInvalidRequestType(t *testing.T) {
 		t.Fatalf("unexpected constructor error: %v", err)
 	}
 
-	msg := &worker.ValidatedMessage{Request: "not-an-email"}
+	msg := &common.ValidatedMessage{Request: "not-an-email"}
 	if _, err := adapter.Send(context.Background(), msg); !errors.Is(err, common.ErrPermanent) {
 		t.Fatalf("expected permanent error for invalid request type, got %v", err)
 	}
 }
 
-func buildValidatedMessage() *worker.ValidatedMessage {
+func buildValidatedMessage() *common.ValidatedMessage {
 	req := &models.EmailRequest{
 		Envelope: models.Envelope{
 			MessageID: "b0c9c2b0-1f3a-4d2d-9e3f-123456789abc",
@@ -151,7 +150,7 @@ func buildValidatedMessage() *worker.ValidatedMessage {
 		},
 	}
 
-	return &worker.ValidatedMessage{
+	return &common.ValidatedMessage{
 		Channel:   models.ChannelEmail,
 		MessageID: req.MessageID,
 		TraceID:   req.TraceID,
