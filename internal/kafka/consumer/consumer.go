@@ -202,7 +202,7 @@ func (c *Consumer) Close() error {
 	}
 	err := c.group.Close()
 	c.wg.Wait()
-	close(c.errorsDoneCh)
+	<-c.errorsDoneCh
 	return err
 }
 
