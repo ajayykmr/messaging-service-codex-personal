@@ -154,7 +154,7 @@ func (f CommitFunc) Commit(ctx context.Context, record *Record) error {
 
 // Dependencies collects the runtime collaborators required by the engine.
 type Dependencies struct {
-    Adapter         common.Adapter
+	Adapter         common.Adapter
 	Validator       Validator
 	StatusPublisher StatusPublisher
 	DLQPublisher    DLQPublisher
@@ -166,8 +166,8 @@ type Dependencies struct {
 // Engine orchestrates validation, retries, backoff, DLQ handling and offset
 // commits for inbound Kafka records in accordance with the detailed design.
 type Engine struct {
-    cfg             Config
-    adapter         common.Adapter
+	cfg             Config
+	adapter         common.Adapter
 	validator       Validator
 	statusPublisher StatusPublisher
 	dlqPublisher    DLQPublisher
@@ -218,7 +218,7 @@ func NewEngine(cfg Config, deps Dependencies) (*Engine, error) {
 	if reflect.ValueOf(logger).IsZero() {
 		logger = zerolog.Nop()
 	}
-	logger = logger.With().Str("component", "worker_engine").Logger()
+	logger = logger.With().Str("component", "worker").Logger()
 
 	nowFunc := deps.Now
 	if nowFunc == nil {

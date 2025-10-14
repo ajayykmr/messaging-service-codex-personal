@@ -209,16 +209,16 @@ function scenario_headers() {
   local scenario="$1"
   case "$scenario" in
     permanent-failure)
-      echo "X-Mock-Provider-Scenario=permanent"
+      echo "X-Mock-Provider-Scenario:permanent"
       ;;
     transient-retry)
-      echo "X-Mock-Provider-Scenario=transient"
+      echo "X-Mock-Provider-Scenario:transient"
       ;;
     retry-two-attempts)
-      echo "X-Mock-Provider-Failure-Attempts=2"
+      echo "X-Mock-Provider-Failure-Attempts:2"
       ;;
     provider-timeout)
-      echo "X-Mock-Provider-Scenario=timeout,X-Mock-Provider-Latency=2s"
+      echo "X-Mock-Provider-Scenario:timeout,X-Mock-Provider-Latency:2s"
       ;;
     custom)
       echo "${CUSTOM_HEADERS:-}"
@@ -275,6 +275,7 @@ for scenario in "${SCENARIOS[@]}"; do
     [[ -n "$HEADERS" ]] && echo "Headers: $HEADERS"
 
     send_to_kafka "$PAYLOAD" "$HEADERS"
+    echo
   done
 done
 
