@@ -102,8 +102,11 @@ type TwilioConfig struct {
 
 // ProviderConfig wraps configuration for external providers.
 type ProviderConfig struct {
-	SMTP   SMTPConfig
-	Twilio TwilioConfig
+	EmailProvider    string
+	SMSProvider      string
+	WhatsAppProvider string
+	SMTP             SMTPConfig
+	Twilio           TwilioConfig
 }
 
 // TimeoutConfig contains timeout thresholds for outbound providers.
@@ -174,15 +177,21 @@ func Load() (*Config, error) {
 	cfg.Validation.MetaMaxKeyLen = ldr.getInt("META_MAX_KEY_LEN", 64, false)
 	cfg.Validation.MetaMaxValueLen = ldr.getInt("META_MAX_VALUE_LEN", 256, false)
 
-	cfg.Providers.SMTP.Host = ldr.getString("SMTP_HOST", "", true)
-	cfg.Providers.SMTP.Port = ldr.getInt("SMTP_PORT", 0, true)
-	cfg.Providers.SMTP.User = ldr.getString("SMTP_USER", "", true)
-	cfg.Providers.SMTP.Pass = ldr.getString("SMTP_PASS", "", true)
-	cfg.Providers.SMTP.From = ldr.getString("SMTP_FROM", "", true)
+	cfg.Providers.EmailProvider = strings.ToLower(ldr.getString("EMAIL_PROVIDER", "mock", false))
+	cfg.Providers.SMSProvider = strings.ToLower(ldr.getString("SMS_PROVIDER", "mock", false))
+	cfg.Providers.WhatsAppProvider = strings.ToLower(ldr.getString("WHATSAPP_PROVIDER", "mock", false))
 
-	cfg.Providers.Twilio.AccountSID = ldr.getString("TWILIO_ACCOUNT_SID", "", true)
-	cfg.Providers.Twilio.AuthToken = ldr.getString("TWILIO_AUTH_TOKEN", "", true)
-	cfg.Providers.Twilio.PhoneNumber = ldr.getString("TWILIO_PHONE_NUMBER", "", true)
+	requireSMTP := cfg.Providers.EmailProvider == "smtp"
+	cfg.Providers.SMTP.Host = ldr.getString("SMTP_HOST", "", requireSMTP)
+	cfg.Providers.SMTP.Port = ldr.getInt("SMTP_PORT", 0, requireSMTP)
+	cfg.Providers.SMTP.User = ldr.getString("SMTP_USER", "", requireSMTP)
+	cfg.Providers.SMTP.Pass = ldr.getString("SMTP_PASS", "", requireSMTP)
+	cfg.Providers.SMTP.From = ldr.getString("SMTP_FROM", "", requireSMTP)
+
+	requireTwilio := cfg.Providers.SMSProvider == "twilio" || cfg.Providers.WhatsAppProvider == "twilio"
+	cfg.Providers.Twilio.AccountSID = ldr.getString("TWILIO_ACCOUNT_SID", "", requireTwilio)
+	cfg.Providers.Twilio.AuthToken = ldr.getString("TWILIO_AUTH_TOKEN", "", requireTwilio)
+	cfg.Providers.Twilio.PhoneNumber = ldr.getString("TWILIO_PHONE_NUMBER", "", requireTwilio)
 
 	cfg.Timeouts.ProviderTimeoutSeconds = ldr.getInt("PROVIDER_TIMEOUT_SECONDS", 30, false)
 
@@ -191,11 +200,76 @@ func Load() (*Config, error) {
 	cfg.Health.HandlerTimeoutMs = ldr.getInt("HEALTH_HANDLER_TIMEOUT_MS", 500, false)
 	cfg.Health.EnableProviderProbe = ldr.getBool("HEALTH_ENABLE_PROVIDER_PROBE", false, false)
 
+	validateProviderSelections(cfg, ldr)
+
 	if err := ldr.validate(); err != nil {
 		return nil, err
 	}
 
 	return cfg, nil
+}
+
+func validateProviderSelections(cfg *Config, ldr *envLoader) {
+	cfg.Providers.EmailProvider = normalizeProviderValue(cfg.Providers.EmailProvider, "mock")
+	cfg.Providers.SMSProvider = normalizeProviderValue(cfg.Providers.SMSProvider, "mock")
+	cfg.Providers.WhatsAppProvider = normalizeProviderValue(cfg.Providers.WhatsAppProvider, "mock")
+
+	if !contains([]string{"smtp", "mock"}, cfg.Providers.EmailProvider) {
+		ldr.addError("EMAIL_PROVIDER must be one of: smtp, mock")
+	}
+	if !contains([]string{"mock", "twilio"}, cfg.Providers.SMSProvider) {
+		ldr.addError("SMS_PROVIDER must be one of: mock, twilio")
+	}
+	if !contains([]string{"mock", "twilio"}, cfg.Providers.WhatsAppProvider) {
+		ldr.addError("WHATSAPP_PROVIDER must be one of: mock, twilio")
+	}
+
+	if cfg.Providers.EmailProvider == "smtp" {
+		if strings.TrimSpace(cfg.Providers.SMTP.Host) == "" {
+			ldr.addError("SMTP_HOST is required when EMAIL_PROVIDER=smtp")
+		}
+		if cfg.Providers.SMTP.Port <= 0 {
+			ldr.addError("SMTP_PORT must be greater than zero when EMAIL_PROVIDER=smtp")
+		}
+		if strings.TrimSpace(cfg.Providers.SMTP.From) == "" {
+			ldr.addError("SMTP_FROM is required when EMAIL_PROVIDER=smtp")
+		}
+		if strings.TrimSpace(cfg.Providers.SMTP.User) == "" {
+			ldr.addError("SMTP_USER is required when EMAIL_PROVIDER=smtp")
+		}
+		if strings.TrimSpace(cfg.Providers.SMTP.Pass) == "" {
+			ldr.addError("SMTP_PASS is required when EMAIL_PROVIDER=smtp")
+		}
+	}
+
+	if cfg.Providers.SMSProvider == "twilio" || cfg.Providers.WhatsAppProvider == "twilio" {
+		if strings.TrimSpace(cfg.Providers.Twilio.AccountSID) == "" {
+			ldr.addError("TWILIO_ACCOUNT_SID is required when SMS_PROVIDER or WHATSAPP_PROVIDER is twilio")
+		}
+		if strings.TrimSpace(cfg.Providers.Twilio.AuthToken) == "" {
+			ldr.addError("TWILIO_AUTH_TOKEN is required when SMS_PROVIDER or WHATSAPP_PROVIDER is twilio")
+		}
+		if strings.TrimSpace(cfg.Providers.Twilio.PhoneNumber) == "" {
+			ldr.addError("TWILIO_PHONE_NUMBER is required when SMS_PROVIDER or WHATSAPP_PROVIDER is twilio")
+		}
+	}
+}
+
+func normalizeProviderValue(value string, def string) string {
+	value = strings.TrimSpace(strings.ToLower(value))
+	if value == "" {
+		return def
+	}
+	return value
+}
+
+func contains(values []string, needle string) bool {
+	for _, v := range values {
+		if v == needle {
+			return true
+		}
+	}
+	return false
 }
 
 type envLoader struct {

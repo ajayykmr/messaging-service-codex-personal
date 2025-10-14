@@ -95,6 +95,37 @@ func TestMockProviderTransientScenario(t *testing.T) {
 	}
 }
 
+func TestMockProviderFailureAttemptsBeforeSuccess(t *testing.T) {
+	provider := emailprovider.NewMockProvider(zerolog.Nop(), emailprovider.WithLatencyRange(0, 0))
+	payload := func() *emailprovider.Payload {
+		return &emailprovider.Payload{
+			MessageID: "retry-message",
+			From:      "noreply@example.com",
+			To:        []string{"user@example.com"},
+			Headers: map[string]string{
+				"X-Mock-Provider-Failure-Attempts": "2",
+			},
+		}
+	}
+
+	ctx := context.Background()
+
+	if _, err := provider.Send(ctx, payload()); err == nil {
+		t.Fatalf("expected first attempt to fail")
+	}
+	if _, err := provider.Send(ctx, payload()); err == nil {
+		t.Fatalf("expected second attempt to fail")
+	}
+
+	resp, err := provider.Send(ctx, payload())
+	if err != nil {
+		t.Fatalf("expected third attempt to succeed, got error %v", err)
+	}
+	if resp == nil || resp.Code != 250 {
+		t.Fatalf("expected SMTP 250 response after retries, got %+v", resp)
+	}
+}
+
 func TestMockProviderTimeoutScenario(t *testing.T) {
 	provider := emailprovider.NewMockProvider(
 		zerolog.Nop(),

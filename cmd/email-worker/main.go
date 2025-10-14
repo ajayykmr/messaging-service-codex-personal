@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 	kafkapublisher "github.com/example/messaging-microservice/internal/kafka/publisher"
 	"github.com/example/messaging-microservice/internal/logger"
 	"github.com/example/messaging-microservice/internal/models"
-	emailprovider "github.com/example/messaging-microservice/internal/providers/email"
+	"github.com/example/messaging-microservice/internal/providers/factory"
 	"github.com/example/messaging-microservice/internal/worker"
 	emailvalidator "github.com/example/messaging-microservice/internal/worker/validator/email"
 )
@@ -68,9 +69,13 @@ func main() {
 		log.Fatal().Msg("failed to create dlq publisher")
 	}
 
-	provider, err := emailprovider.NewSMTPProvider(cfg.Providers.SMTP, log.With().Str("component", "smtp-provider").Logger())
+	providerLogger := log.With().
+		Str("component", "email-provider").
+		Str("backend", strings.ToLower(strings.TrimSpace(cfg.Providers.EmailProvider))).
+		Logger()
+	provider, err := factory.Email(cfg.Providers, providerLogger)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialise smtp provider")
+		log.Fatal().Err(err).Msg("failed to initialise email provider")
 	}
 
 	adapter, err := emailadapter.NewAdapter(provider, log.With().Str("component", "email-adapter").Logger())

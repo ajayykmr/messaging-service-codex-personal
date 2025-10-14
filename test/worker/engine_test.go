@@ -283,6 +283,100 @@ func TestEngineRetriesTransientFailures(t *testing.T) {
 	}
 }
 
+func TestEngineRetriesTransientErrorsUntilSuccess(t *testing.T) {
+	ctx := context.Background()
+	now := time.Unix(3, 0).UTC()
+
+	validator := &validatorStub{
+		msg: &worker.ValidatedMessage{
+			Channel:   "email",
+			MessageID: "msg-retry-success",
+		},
+	}
+	adapter := &adapterStub{
+		responses: []callResult{
+			{resp: &common.ProviderResponse{Status: "transient"}, err: common.ErrTransient},
+			{resp: &common.ProviderResponse{Status: "transient"}, err: common.ErrTransient},
+			{resp: &common.ProviderResponse{Status: "ok", Message: "sent"}},
+		},
+	}
+	status := &statusCollector{}
+	dlq := &dlqCollector{}
+
+	commitCh := make(chan struct{}, 1)
+	commitFn := func(context.Context, *worker.Record) error {
+		select {
+		case commitCh <- struct{}{}:
+		default:
+		}
+		return nil
+	}
+
+	engine, err := worker.NewEngine(worker.Config{
+		Channel:           "email",
+		MsgMaxBytes:       1024,
+		MaxAttempts:       len(adapter.responses),
+		BaseBackoff:       0,
+		MaxBackoff:        0,
+		WorkerConcurrency: 1,
+	}, worker.Dependencies{
+		Adapter:         adapter,
+		Validator:       validator,
+		StatusPublisher: status,
+		DLQPublisher:    dlq,
+		Committer:       worker.CommitFunc(commitFn),
+		Logger:          zerolog.New(io.Discard),
+		Now:             func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("unexpected engine error: %v", err)
+	}
+
+	record := &worker.Record{
+		Topic: "email.request",
+		Key:   []byte("msg-retry-success"),
+		Value: []byte(`{"message":"hello"}`),
+	}
+
+	engine.HandleRecord(ctx, record)
+
+	select {
+	case <-commitCh:
+	case <-time.After(time.Second):
+		t.Fatalf("expected commit after eventual success")
+	}
+
+	if adapter.index != len(adapter.responses) {
+		t.Fatalf("adapter invoked %d times, want %d", adapter.index, len(adapter.responses))
+	}
+
+	expectedEvents := []string{
+		models.StatusEventQueued,
+		models.StatusEventAttempt,
+		models.StatusEventAttempt,
+		models.StatusEventAttempt,
+		models.StatusEventSent,
+	}
+	if !eventTypesMatch(status.events, expectedEvents) {
+		t.Fatalf("unexpected status events %+v", status.events)
+	}
+
+	var sentAttempt int
+	for _, evt := range status.events {
+		if evt.EventType == models.StatusEventSent {
+			sentAttempt = evt.Attempt
+			break
+		}
+	}
+	if sentAttempt != len(adapter.responses) {
+		t.Fatalf("sent attempt = %d, want %d", sentAttempt, len(adapter.responses))
+	}
+
+	if len(dlq.records) != 0 {
+		t.Fatalf("did not expect DLQ records, got %d", len(dlq.records))
+	}
+}
+
 func eventTypesMatch(events []models.StatusEvent, expected []string) bool {
 	if len(events) != len(expected) {
 		return false

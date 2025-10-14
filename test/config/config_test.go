@@ -53,11 +53,57 @@ func TestLoadSuccess(t *testing.T) {
 	if cfg.App.LogLevel != "warn" {
 		t.Fatalf("expected log level warn, got %s", cfg.App.LogLevel)
 	}
+	if cfg.Providers.EmailProvider != "mock" {
+		t.Fatalf("expected email provider mock, got %s", cfg.Providers.EmailProvider)
+	}
+	if cfg.Providers.SMSProvider != "mock" {
+		t.Fatalf("expected sms provider mock, got %s", cfg.Providers.SMSProvider)
+	}
+	if cfg.Providers.WhatsAppProvider != "mock" {
+		t.Fatalf("expected whatsapp provider mock, got %s", cfg.Providers.WhatsAppProvider)
+	}
 	if cfg.Providers.SMTP.From != "noreply@example.com" {
 		t.Fatalf("expected smtp from noreply@example.com, got %s", cfg.Providers.SMTP.From)
 	}
 	if cfg.Timeouts.ProviderTimeoutSeconds != 30 {
 		t.Fatalf("expected default provider timeout 30, got %d", cfg.Timeouts.ProviderTimeoutSeconds)
+	}
+}
+
+func TestLoadMockProviders(t *testing.T) {
+	t.Setenv("EMAIL_PROVIDER", "mock")
+	t.Setenv("SMS_PROVIDER", "mock")
+	t.Setenv("WHATSAPP_PROVIDER", "mock")
+	t.Setenv("KAFKA_BROKERS", "broker-a:9092")
+	t.Setenv("KAFKA_EMAIL_REQUEST_TOPIC", "email.request")
+	t.Setenv("KAFKA_EMAIL_STATUS_TOPIC", "email.status")
+	t.Setenv("KAFKA_EMAIL_DLQ_TOPIC", "email.dlq")
+	t.Setenv("KAFKA_SMS_REQUEST_TOPIC", "sms.request")
+	t.Setenv("KAFKA_SMS_STATUS_TOPIC", "sms.status")
+	t.Setenv("KAFKA_SMS_DLQ_TOPIC", "sms.dlq")
+	t.Setenv("KAFKA_WHATSAPP_REQUEST_TOPIC", "wa.request")
+	t.Setenv("KAFKA_WHATSAPP_STATUS_TOPIC", "wa.status")
+	t.Setenv("KAFKA_WHATSAPP_DLQ_TOPIC", "wa.dlq")
+	t.Setenv("EMAIL_CONSUMER_GROUP", "email-consumer")
+	t.Setenv("SMS_CONSUMER_GROUP", "sms-consumer")
+	t.Setenv("WHATSAPP_CONSUMER_GROUP", "wa-consumer")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("unexpected error loading mock providers: %v", err)
+	}
+
+	if cfg.Providers.EmailProvider != "mock" {
+		t.Fatalf("expected email provider mock, got %s", cfg.Providers.EmailProvider)
+	}
+	if cfg.Providers.SMSProvider != "mock" {
+		t.Fatalf("expected sms provider mock, got %s", cfg.Providers.SMSProvider)
+	}
+	if cfg.Providers.WhatsAppProvider != "mock" {
+		t.Fatalf("expected whatsapp provider mock, got %s", cfg.Providers.WhatsAppProvider)
+	}
+	if cfg.Providers.SMTP.Host != "" {
+		t.Fatalf("expected smtp host empty when using mock, got %s", cfg.Providers.SMTP.Host)
 	}
 }
 

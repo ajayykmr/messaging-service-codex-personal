@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,8 +24,10 @@ const (
 	ScenarioPermanent Scenario = "permanent"
 	ScenarioTimeout   Scenario = "timeout"
 
-	headerScenario = "X-Mock-Provider-Scenario"
-	headerLatency  = "X-Mock-Provider-Latency"
+	headerScenario       = "X-Mock-Provider-Scenario"
+	headerLatency        = "X-Mock-Provider-Latency"
+	headerFailureAttempt = "X-Mock-Provider-Failure-Attempts"
+	headerFailureKey     = "X-Mock-Provider-Failure-Key"
 )
 
 // Option customizes the behaviour of the mock provider at construction time.
@@ -84,8 +87,10 @@ type MockProvider struct {
 	defaultScenario Scenario
 	now             func() time.Time
 
-	mu  sync.Mutex
-	rnd *rand.Rand
+	mu           sync.Mutex
+	rnd          *rand.Rand
+	failuresMu   sync.Mutex
+	failureState map[string]int
 }
 
 // NewMockProvider constructs a mock SMTP provider instance using sensible
@@ -102,6 +107,7 @@ func NewMockProvider(logger zerolog.Logger, opts ...Option) *MockProvider {
 		defaultScenario: ScenarioSuccess,
 		now:             time.Now,
 		rnd:             rand.New(rand.NewSource(time.Now().UnixNano())), // #nosec G404
+		failureState:    make(map[string]int),
 	}
 
 	for _, opt := range opts {
@@ -131,6 +137,9 @@ func (p *MockProvider) Send(ctx context.Context, payload *Payload) (*RawResponse
 	}
 
 	scenario := p.resolveScenario(payload)
+	if scenario == ScenarioSuccess && p.consumeFailureAttempt(payload) {
+		scenario = ScenarioTransient
+	}
 	p.logger.Debug().
 		Str("provider", "mock_smtp").
 		Str("scenario", string(scenario)).
@@ -195,6 +204,58 @@ func (p *MockProvider) sampleLatency(payload *Payload) time.Duration {
 
 	delta := max - min
 	return min + time.Duration(p.rnd.Int63n(int64(delta)+1))
+}
+
+func (p *MockProvider) consumeFailureAttempt(payload *Payload) bool {
+	attempts := p.resolveFailureAttempts(payload)
+	if attempts <= 0 {
+		return false
+	}
+
+	key := payload.MessageID
+	if key == "" {
+		key, _ = pickHeader(payload.Headers, headerFailureKey)
+	}
+	if key == "" {
+		key = fmt.Sprintf("payload-%p", payload)
+	}
+
+	p.failuresMu.Lock()
+	defer p.failuresMu.Unlock()
+
+	remaining, ok := p.failureState[key]
+	if !ok {
+		remaining = attempts
+	}
+
+	if remaining <= 0 {
+		p.failureState[key] = remaining
+		return false
+	}
+
+	remaining--
+	p.failureState[key] = remaining
+
+	return true
+}
+
+func (p *MockProvider) resolveFailureAttempts(payload *Payload) int {
+	if payload == nil {
+		return 0
+	}
+	value, ok := pickHeader(payload.Headers, headerFailureAttempt)
+	if !ok {
+		return 0
+	}
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil || n <= 0 {
+		return 0
+	}
+	return n
 }
 
 func (p *MockProvider) baseResponse(payload *Payload, code int, body string) *RawResponse {
