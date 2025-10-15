@@ -144,13 +144,22 @@ func (p *Producer) PublishSync(topic string, key []byte, headers map[string][]by
 		msg.Key = sarama.ByteEncoder(key)
 	}
 
-	_, _, err := p.syncProducer.SendMessage(msg)
+	partition, offset, err := p.syncProducer.SendMessage(msg)
 	if err != nil {
 		p.ready.Store(false)
+		p.logger.Error().
+			Err(err).
+			Str("topic", topic).
+			Msg("kafka producer: sync publish failed")
 		return fmt.Errorf("kafka producer: send sync: %w", err)
 	}
 
 	p.ready.Store(true)
+	p.logger.Debug().
+		Str("topic", topic).
+		Int32("partition", partition).
+		Int64("offset", offset).
+		Msg("kafka producer: sync publish succeeded")
 	return nil
 }
 
@@ -172,9 +181,18 @@ func (p *Producer) PublishAsync(topic string, key []byte, headers map[string][]b
 
 	select {
 	case p.asyncProducer.Input() <- msg:
+		p.logger.Debug().
+			Str("topic", topic).
+			Msg("kafka producer: async publish enqueued")
 		return nil
 	default:
-		return errors.New("kafka producer: async input buffer full")
+		err := errors.New("kafka producer: async input buffer full")
+		p.ready.Store(false)
+		p.logger.Error().
+			Err(err).
+			Str("topic", topic).
+			Msg("kafka producer: async publish failed")
+		return err
 	}
 }
 

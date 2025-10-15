@@ -17,8 +17,8 @@ set -euo pipefail
 #   --help           Display this help text.
 #
 # Environment overrides (read after sourcing the env file, if any):
-#   KAFKA_BOOTSTRAP       Kafka bootstrap servers (default localhost:9092)
-#   KAFKA_BROKER_SERVICE  docker-compose service name for the broker (default broker)
+#   KAFKA_BOOTSTRAP       Kafka bootstrap servers (default kafka-1:9092)
+#   KAFKA_BROKER_SERVICE  docker-compose service name for the broker (default kafka-1)
 #   KAFKA_PROBE_TOPIC     Alternate way to set the probe topic name
 #   KAFKA_KEEP_PROBE      When set to 1, keep the topic after the test
 
@@ -67,8 +67,8 @@ if [[ -f "$ENV_FILE_DEFAULT" ]]; then
   set +a
 fi
 
-BOOTSTRAP="${KAFKA_BOOTSTRAP:-localhost:9092}"
-BROKER_SERVICE="${KAFKA_BROKER_SERVICE:-broker}"
+BOOTSTRAP="${KAFKA_BOOTSTRAP:-kafka-1:9092}"
+BROKER_SERVICE="${KAFKA_BROKER_SERVICE:-kafka-1}"
 if [[ -z "$PROBE_TOPIC" ]]; then
   PROBE_TOPIC="${KAFKA_PROBE_TOPIC:-_kafka_probe_$(date -u +%s)_$RANDOM}"
 fi
@@ -84,7 +84,7 @@ for cmd in docker; do
   fi
 done
 
-KAFKA_BIN="/opt/kafka/bin"
+KAFKA_BIN="/opt/bitnami/kafka/bin"
 PROBE_VALUE="connection-probe-$(date -u +%s)"
 TMP_CONSUME="$(mktemp -t kafka-probe-XXXXXX)"
 
@@ -102,7 +102,7 @@ echo "==> Checking broker API versions on $BOOTSTRAP"
 broker_cmd "$KAFKA_BIN/kafka-broker-api-versions.sh --bootstrap-server \"$BOOTSTRAP\"" >/dev/null
 
 echo "==> Creating probe topic $PROBE_TOPIC"
-broker_cmd "$KAFKA_BIN/kafka-topics.sh --bootstrap-server \"$BOOTSTRAP\" --create --if-not-exists --topic \"$PROBE_TOPIC\" --partitions 1 --replication-factor 1" >/dev/null
+broker_cmd "$KAFKA_BIN/kafka-topics.sh --bootstrap-server \"$BOOTSTRAP\" --create --if-not-exists --topic \"$PROBE_TOPIC\" --partitions 1 --replication-factor 3" >/dev/null
 
 echo "==> Producing probe message"
 printf '%s\n' "$PROBE_VALUE" | broker_cmd "$KAFKA_BIN/kafka-console-producer.sh --bootstrap-server \"$BOOTSTRAP\" --topic \"$PROBE_TOPIC\"" >/dev/null

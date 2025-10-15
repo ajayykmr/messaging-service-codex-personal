@@ -10,9 +10,9 @@ set -euo pipefail
 #   scripts/email-scenario-producer.sh --all
 #   scripts/email-scenario-producer.sh --scenario retry-two-attempts --count 3
 # Environment overrides:
-#   KAFKA_BOOTSTRAP        - bootstrap servers (default localhost:9092)
+#   KAFKA_BOOTSTRAP        - bootstrap servers (default: KAFKA_BROKERS or kafka-1:9092)
 #   KAFKA_EMAIL_TOPIC      - email request topic (default messages.email.request)
-#   KAFKA_BROKER_SERVICE   - docker compose service name (default broker)
+#   KAFKA_BROKER_SERVICE   - docker compose service name (default kafka-1)
 #   SMTP_FROM              - default From address (default noreply@quantiqueminds.com)
 #   EMAIL_RECIPIENT        - primary recipient (default ajay@quantiqueminds.com)
 #   PRODUCER_VERBOSE       - set to 1 for verbose logging
@@ -30,9 +30,9 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-BOOTSTRAP="${KAFKA_BOOTSTRAP:-localhost:9092}"
+BOOTSTRAP="${KAFKA_BOOTSTRAP:-${KAFKA_BROKERS:-kafka-1:9092}}"
 TOPIC="${KAFKA_EMAIL_TOPIC:-messages.email.request}"
-BROKER_SERVICE="${KAFKA_BROKER_SERVICE:-broker}"
+BROKER_SERVICE="${KAFKA_BROKER_SERVICE:-kafka-1}"
 DEFAULT_FROM="${SMTP_FROM:-noreply@quantiqueminds.com}"
 DEFAULT_RECIPIENT="${EMAIL_RECIPIENT:-ajay@quantiqueminds.com}"
 PRODUCER_VERBOSE="${PRODUCER_VERBOSE:-0}"
@@ -115,7 +115,7 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
-KAFKA_BIN="/opt/kafka/bin"
+KAFKA_BIN="/opt/bitnami/kafka/bin"
 
 function run_in_broker() {
   local cmd="$1"
@@ -131,7 +131,16 @@ function json_compact() {
 }
 
 function oversized_body() {
-  python3 -c 'import sys; sys.stdout.write("A"*200001)'
+  local max_bytes="${MSG_MAX_BYTES:-200000}"
+  if ! [[ "$max_bytes" =~ ^[0-9]+$ ]]; then
+    echo "Warning: MSG_MAX_BYTES='$max_bytes' is not numeric. Falling back to 200000." >&2
+    max_bytes=200000
+  fi
+  python3 - "$max_bytes" <<'PY'
+import sys
+limit = int(sys.argv[1])
+sys.stdout.write("A" * (limit + 1))
+PY
 }
 
 function base_payload() {
@@ -179,9 +188,7 @@ function scenario_payload() {
       base_payload "$message_id" | jq 'del(.created_at)'
       ;;
     oversize-body)
-      local body
-      body="$(oversized_body)"
-      base_payload "$message_id" | jq --arg content "$body" '.body.content = $content'
+      base_payload "$message_id" | jq --rawfile content <(oversized_body) '.body.content = $content'
       ;;
     permanent-failure)
       base_payload "$message_id" | jq '.meta.provider_scenario = "permanent"'

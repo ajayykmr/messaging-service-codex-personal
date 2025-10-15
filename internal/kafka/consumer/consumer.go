@@ -266,6 +266,12 @@ func (h *groupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim s
 				Int32("partition", msg.Partition).
 				Int64("offset", msg.Offset).
 				Msg("kafka consumer handler error")
+		} else {
+			h.consumer.logger.Debug().
+				Str("topic", msg.Topic).
+				Int32("partition", msg.Partition).
+				Int64("offset", msg.Offset).
+				Msg("kafka consumer handler succeeded")
 		}
 	}
 

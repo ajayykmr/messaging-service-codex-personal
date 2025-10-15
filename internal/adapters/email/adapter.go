@@ -84,12 +84,12 @@ func (a *Adapter) Send(ctx context.Context, msg *common.ValidatedMessage) (*comm
 	rawResp, err := a.provider.Send(ctx, payload)
 	if err != nil {
 		resp := a.buildErrorResponse(rawResp, err)
-    a.logger.Info().
-        Str("message_id", req.MessageID).
-        Str("channel", models.ChannelEmail).
-        Str("provider_status", resp.Status).
-        Str("provider_id", resp.Meta["provider_id"]).
-        Err(err).
+		a.logger.Info().
+			Str("message_id", req.MessageID).
+			Str("channel", models.ChannelEmail).
+			Str("provider_status", resp.Status).
+			Str("provider_id", resp.Meta["provider_id"]).
+			Err(err).
 			Msg("email adapter send failed")
 		return resp, a.wrapError(err, rawResp)
 	}
