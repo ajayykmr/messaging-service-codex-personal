@@ -67,7 +67,7 @@ This document is a developer-facing **Detailed Technical Specification** for the
 | Layer | Choice |
 |--------|--------|
 | **Language & Runtime** | Go (Golang 1.22+) |
-| **Framework** | Fiber |
+| **Framework** | None (plain Go workers) |
 | **Message Broker** | Apache Kafka |
 | **Kafka Client Library** | `github.com/IBM/sarama` |
 | **Database** | MongoDB *(future)* |
@@ -113,7 +113,7 @@ The diagram below shows directional flow clearly for requests and status events.
 - **Producers / upstream systems** publish send requests to `messages.<channel>.request` topics.  
 - **Channel Workers** (multiple instances) consume from the request topic, validate and orchestrate sending.  
 - A worker calls the **Adapter**, which normalizes request and calls the **Provider** (SMTP/Twilio). Adapter classifies the response and returns a normalized `ProviderResponse` and a classified error (transient/permanent).  
-- The worker emits **status events** (`queued`, `attempt`, `sent`, `failed`, `dlq`) to `messages.<channel>.status` and writes DLQ records to `messages.<channel>.dlq` when necessary.
+- The worker emits **status events** (`queued`, `attempt`, `sent`, `failed`) to `messages.<channel>.status` and writes DLQ records to `messages.<channel>.dlq` when necessary.
 
 **Notes**
 
@@ -173,8 +173,10 @@ messaging-microservice/
 │   └── util/
 │       └── validation.go         # Validators: UUID, RFC3339, email, E.164, size checks
 ├── scripts/
-│   ├── produce-sample-email.sh   # helper to produce sample messages to Kafka
-│   └── run-local.sh              # local startup helper that runs kafka + workers
+│   ├── email-scenario-producer.sh   # emit sample channel payloads with failure scenarios
+│   ├── kafka-producer-load-test.sh  # generate high-volume load for stress tests
+│   ├── kafka-init.sh                # create topics/quotas in the local cluster
+│   └── check-kafka-connection.sh    # sanity-check broker connectivity from tooling
 ├── test/
 │   └── docker-compose.yml        # kafka, zookeeper, schema-registry (optional), and mock providers
 ├── .env                          # local env (do not commit)
@@ -600,12 +602,12 @@ Place `.env.example` in repo root — copy into `.env` locally (do not commit `.
 # App
 APP_ENV=development
 APP_PORT=8080
-LOG_LEVEL=info
+LOG_LEVEL=debug
 
 # Kafka
-KAFKA_BROKERS=localhost:9092
+KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
 KAFKA_REQUEST_PARTITIONS=6
-KAFKA_REPLICATION_FACTOR=1
+KAFKA_REPLICATION_FACTOR=3
 
 # Topics
 KAFKA_EMAIL_REQUEST_TOPIC=messages.email.request
@@ -620,51 +622,59 @@ KAFKA_WHATSAPP_REQUEST_TOPIC=messages.whatsapp.request
 KAFKA_WHATSAPP_STATUS_TOPIC=messages.whatsapp.status
 KAFKA_WHATSAPP_DLQ_TOPIC=messages.whatsapp.dlq
 
+KAFKA_TEMP_TOPIC=_kafka_connection_probe #used for testing kafka connection in scripts
+
 # Consumer groups
 EMAIL_CONSUMER_GROUP=email-worker-group
 SMS_CONSUMER_GROUP=sms-worker-group
 WHATSAPP_CONSUMER_GROUP=whatsapp-worker-group
 
 # Retry / Worker
-MAX_ATTEMPTS=3
-BASE_BACKOFF_SECONDS=10
-MAX_BACKOFF_SECONDS=120
+MAX_ATTEMPTS=5
+BASE_BACKOFF_SECONDS=2
+MAX_BACKOFF_SECONDS=60
 BACKOFF_STRATEGY=exponential
 BACKOFF_JITTER=full
-WORKER_CONCURRENCY=10
+WORKER_CONCURRENCY=20
 COMMIT_ON_SUCCESS_ONLY=true
 
 # Validation limits
-MSG_MAX_BYTES=200000
-RECIPIENTS_MAX=50
+MSG_MAX_BYTES=5242880
+RECIPIENTS_MAX=100
 SUBJECT_MAX_LEN=255
-BODY_MAX_BYTES=100000
+BODY_MAX_BYTES=2097152
 SMS_RECIPIENTS_MAX=10
 SMS_BODY_MAX=1600
 WA_BODY_MAX=4096
-META_MAX_ENTRIES=20
-META_MAX_KEY_LEN=64
-META_MAX_VALUE_LEN=256
+META_MAX_ENTRIES=50
+META_MAX_KEY_LEN=128
+META_MAX_VALUE_LEN=1024
 
-# Providers (local dev only)
+# Providers
+EMAIL_PROVIDER=mock
+# EMAIL_PROVIDER=smtp    #for smtp
+SMS_PROVIDER=mock
+# SMS_PROVIDER=twilio    #for twilio
+WHATSAPP_PROVIDER=mock
+# WHATSAPP_PROVIDER=twilio    #for twilio
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=noreply@example.com
-SMTP_PASS=changeme
-SMTP_FROM=noreply@example.com
+SMTP_USER=your_smtp_user@example.com
+SMTP_PASS=your_smtp_password
+SMTP_FROM=your_from_address@example.com
 
-TWILIO_ACCOUNT_SID=your_sid
-TWILIO_AUTH_TOKEN=your_token
-TWILIO_PHONE_NUMBER=+1234567890
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+10000000000
 
 # Timeouts
-PROVIDER_TIMEOUT_SECONDS=30
+PROVIDER_TIMEOUT_SECONDS=20
 
 # Health
-HEALTH_POLL_INTERVAL_SECONDS=15
-HEALTH_CHECK_TIMEOUT_MS=200
-HEALTH_HANDLER_TIMEOUT_MS=500
-HEALTH_ENABLE_PROVIDER_PROBE=false
+HEALTH_POLL_INTERVAL_SECONDS=30
+HEALTH_CHECK_TIMEOUT_MS=1000
+HEALTH_HANDLER_TIMEOUT_MS=2000
+HEALTH_ENABLE_PROVIDER_PROBE=true
 ```
 
 Parsing notes: split `KAFKA_BROKERS` by comma, parse ints, booleans. Fail fast if required channel provider credentials missing.
@@ -741,4 +751,3 @@ DLQ error:
 5. Implement adapters and mock providers, run integration tests.
 
 ---
-
