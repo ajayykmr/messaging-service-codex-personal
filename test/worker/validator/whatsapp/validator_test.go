@@ -8,9 +8,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/example/messaging-microservice/internal/config"
-	"github.com/example/messaging-microservice/internal/models"
-	wav "github.com/example/messaging-microservice/internal/worker/validator/whatsapp"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	wav "github.com/ajayykmr/messaging-service-go/internal/worker/validator/whatsapp"
 )
 
 func TestValidatorSuccess(t *testing.T) {

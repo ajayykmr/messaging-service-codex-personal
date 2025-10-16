@@ -6,10 +6,10 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/example/messaging-microservice/internal/config"
-	emailprovider "github.com/example/messaging-microservice/internal/providers/email"
-	smsprovider "github.com/example/messaging-microservice/internal/providers/sms"
-	waprovider "github.com/example/messaging-microservice/internal/providers/whatsapp"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
+	emailprovider "github.com/ajayykmr/messaging-service-go/internal/providers/email"
+	smsprovider "github.com/ajayykmr/messaging-service-go/internal/providers/sms"
+	waprovider "github.com/ajayykmr/messaging-service-go/internal/providers/whatsapp"
 )
 
 // Email constructs the configured email provider, supporting SMTP and mock backends.

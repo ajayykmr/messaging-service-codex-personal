@@ -15,8 +15,8 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/example/messaging-microservice/internal/config"
-	emailprovider "github.com/example/messaging-microservice/internal/providers/email"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
+	emailprovider "github.com/ajayykmr/messaging-service-go/internal/providers/email"
 )
 
 func TestNewSMTPProviderValidation(t *testing.T) {

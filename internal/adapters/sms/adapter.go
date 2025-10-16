@@ -13,9 +13,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	common "github.com/example/messaging-microservice/internal/adapters/common"
-	"github.com/example/messaging-microservice/internal/models"
-	smsprovider "github.com/example/messaging-microservice/internal/providers/sms"
+	common "github.com/ajayykmr/messaging-service-go/internal/adapters/common"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	smsprovider "github.com/ajayykmr/messaging-service-go/internal/providers/sms"
 )
 
 // Option modifies adapter behaviour.

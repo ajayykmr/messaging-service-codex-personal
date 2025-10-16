@@ -1,4 +1,4 @@
-module github.com/example/messaging-microservice
+module github.com/ajayykmr/messaging-service-go
 
 go 1.22
 

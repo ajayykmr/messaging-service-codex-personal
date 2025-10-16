@@ -11,16 +11,16 @@ import (
 
 	"github.com/rs/zerolog"
 
-	waadapter "github.com/example/messaging-microservice/internal/adapters/whatsapp"
-	"github.com/example/messaging-microservice/internal/config"
-	"github.com/example/messaging-microservice/internal/kafka/consumer"
-	"github.com/example/messaging-microservice/internal/kafka/producer"
-	kafkapublisher "github.com/example/messaging-microservice/internal/kafka/publisher"
-	"github.com/example/messaging-microservice/internal/logger"
-	"github.com/example/messaging-microservice/internal/models"
-	"github.com/example/messaging-microservice/internal/providers/factory"
-	"github.com/example/messaging-microservice/internal/worker"
-	whatsappvalidator "github.com/example/messaging-microservice/internal/worker/validator/whatsapp"
+	waadapter "github.com/ajayykmr/messaging-service-go/internal/adapters/whatsapp"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
+	"github.com/ajayykmr/messaging-service-go/internal/kafka/consumer"
+	"github.com/ajayykmr/messaging-service-go/internal/kafka/producer"
+	kafkapublisher "github.com/ajayykmr/messaging-service-go/internal/kafka/publisher"
+	"github.com/ajayykmr/messaging-service-go/internal/logger"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	"github.com/ajayykmr/messaging-service-go/internal/providers/factory"
+	"github.com/ajayykmr/messaging-service-go/internal/worker"
+	whatsappvalidator "github.com/ajayykmr/messaging-service-go/internal/worker/validator/whatsapp"
 )
 
 func main() {

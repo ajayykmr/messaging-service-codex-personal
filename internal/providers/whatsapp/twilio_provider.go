@@ -16,8 +16,8 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/example/messaging-microservice/internal/config"
-	"github.com/example/messaging-microservice/internal/models"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
 )
 
 // HTTPClient abstracts the http.Client Do method for easier testing.

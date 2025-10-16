@@ -15,8 +15,8 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/semaphore"
 
-	common "github.com/example/messaging-microservice/internal/adapters/common"
-	"github.com/example/messaging-microservice/internal/models"
+	common "github.com/ajayykmr/messaging-service-go/internal/adapters/common"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
 )
 
 // Config contains the runtime settings the worker engine relies on to

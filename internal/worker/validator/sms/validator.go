@@ -12,10 +12,10 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/example/messaging-microservice/internal/config"
-	"github.com/example/messaging-microservice/internal/models"
-	"github.com/example/messaging-microservice/internal/util"
-	"github.com/example/messaging-microservice/internal/worker"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	"github.com/ajayykmr/messaging-service-go/internal/util"
+	"github.com/ajayykmr/messaging-service-go/internal/worker"
 )
 
 // Validator implements worker.Validator for SMS payloads.

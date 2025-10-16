@@ -11,16 +11,16 @@ import (
 
 	"github.com/rs/zerolog"
 
-	emailadapter "github.com/example/messaging-microservice/internal/adapters/email"
-	"github.com/example/messaging-microservice/internal/config"
-	"github.com/example/messaging-microservice/internal/kafka/consumer"
-	"github.com/example/messaging-microservice/internal/kafka/producer"
-	kafkapublisher "github.com/example/messaging-microservice/internal/kafka/publisher"
-	"github.com/example/messaging-microservice/internal/logger"
-	"github.com/example/messaging-microservice/internal/models"
-	"github.com/example/messaging-microservice/internal/providers/factory"
-	"github.com/example/messaging-microservice/internal/worker"
-	emailvalidator "github.com/example/messaging-microservice/internal/worker/validator/email"
+	emailadapter "github.com/ajayykmr/messaging-service-go/internal/adapters/email"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
+	"github.com/ajayykmr/messaging-service-go/internal/kafka/consumer"
+	"github.com/ajayykmr/messaging-service-go/internal/kafka/producer"
+	kafkapublisher "github.com/ajayykmr/messaging-service-go/internal/kafka/publisher"
+	"github.com/ajayykmr/messaging-service-go/internal/logger"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	"github.com/ajayykmr/messaging-service-go/internal/providers/factory"
+	"github.com/ajayykmr/messaging-service-go/internal/worker"
+	emailvalidator "github.com/ajayykmr/messaging-service-go/internal/worker/validator/email"
 )
 
 func main() {

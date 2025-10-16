@@ -9,12 +9,12 @@ import (
 
 	"github.com/rs/zerolog"
 
-	smsadapter "github.com/example/messaging-microservice/internal/adapters/sms"
-	"github.com/example/messaging-microservice/internal/config"
-	"github.com/example/messaging-microservice/internal/models"
-	smsprovider "github.com/example/messaging-microservice/internal/providers/sms"
-	"github.com/example/messaging-microservice/internal/worker"
-	smsvalidator "github.com/example/messaging-microservice/internal/worker/validator/sms"
+	smsadapter "github.com/ajayykmr/messaging-service-go/internal/adapters/sms"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	smsprovider "github.com/ajayykmr/messaging-service-go/internal/providers/sms"
+	"github.com/ajayykmr/messaging-service-go/internal/worker"
+	smsvalidator "github.com/ajayykmr/messaging-service-go/internal/worker/validator/sms"
 )
 
 func TestSMSWorkerIntegrationSuccess(t *testing.T) {

@@ -13,9 +13,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	common "github.com/example/messaging-microservice/internal/adapters/common"
-	"github.com/example/messaging-microservice/internal/models"
-	emailprovider "github.com/example/messaging-microservice/internal/providers/email"
+	common "github.com/ajayykmr/messaging-service-go/internal/adapters/common"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	emailprovider "github.com/ajayykmr/messaging-service-go/internal/providers/email"
 )
 
 var smtpErrPattern = regexp.MustCompile(`smtp\s+(\d{3})`)

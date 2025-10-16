@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/example/messaging-microservice/internal/util"
+	"github.com/ajayykmr/messaging-service-go/internal/util"
 )
 
 func TestParseUUIDv4(t *testing.T) {

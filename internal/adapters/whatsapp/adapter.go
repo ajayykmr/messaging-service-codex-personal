@@ -12,9 +12,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	common "github.com/example/messaging-microservice/internal/adapters/common"
-	"github.com/example/messaging-microservice/internal/models"
-	waprovider "github.com/example/messaging-microservice/internal/providers/whatsapp"
+	common "github.com/ajayykmr/messaging-service-go/internal/adapters/common"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	waprovider "github.com/ajayykmr/messaging-service-go/internal/providers/whatsapp"
 )
 
 // Option customises adapter behaviour.

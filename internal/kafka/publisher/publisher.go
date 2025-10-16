@@ -9,7 +9,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/example/messaging-microservice/internal/models"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
 )
 
 var errProducerNotInitialised = errors.New("kafka publisher: producer not initialised")

@@ -8,7 +8,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	waprovider "github.com/example/messaging-microservice/internal/providers/whatsapp"
+	waprovider "github.com/ajayykmr/messaging-service-go/internal/providers/whatsapp"
 )
 
 func TestMockProviderSuccess(t *testing.T) {

@@ -3,7 +3,7 @@ package common_test
 import (
 	"testing"
 
-	common "github.com/example/messaging-microservice/internal/adapters/common"
+	common "github.com/ajayykmr/messaging-service-go/internal/adapters/common"
 )
 
 func TestTruncateRaw(t *testing.T) {

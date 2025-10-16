@@ -9,7 +9,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	emailprovider "github.com/example/messaging-microservice/internal/providers/email"
+	emailprovider "github.com/ajayykmr/messaging-service-go/internal/providers/email"
 )
 
 func TestMockProviderSuccess(t *testing.T) {

@@ -3,7 +3,7 @@ package worker
 import (
 	"context"
 
-	"github.com/example/messaging-microservice/internal/kafka/consumer"
+	"github.com/ajayykmr/messaging-service-go/internal/kafka/consumer"
 )
 
 // NewRecordFromConsumer constructs a worker record from the supplied Kafka

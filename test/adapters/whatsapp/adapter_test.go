@@ -8,10 +8,10 @@ import (
 
 	"github.com/rs/zerolog"
 
-	common "github.com/example/messaging-microservice/internal/adapters/common"
-	waadapter "github.com/example/messaging-microservice/internal/adapters/whatsapp"
-	"github.com/example/messaging-microservice/internal/models"
-	waprovider "github.com/example/messaging-microservice/internal/providers/whatsapp"
+	common "github.com/ajayykmr/messaging-service-go/internal/adapters/common"
+	waadapter "github.com/ajayykmr/messaging-service-go/internal/adapters/whatsapp"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	waprovider "github.com/ajayykmr/messaging-service-go/internal/providers/whatsapp"
 )
 
 func TestAdapterSendSuccess(t *testing.T) {

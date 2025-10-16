@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/example/messaging-microservice/internal/config"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
 )
 
 func setCommonRequiredEnv(t *testing.T) {

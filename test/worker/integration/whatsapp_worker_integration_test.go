@@ -8,12 +8,12 @@ import (
 
 	"github.com/rs/zerolog"
 
-	waadapter "github.com/example/messaging-microservice/internal/adapters/whatsapp"
-	"github.com/example/messaging-microservice/internal/config"
-	"github.com/example/messaging-microservice/internal/models"
-	waprovider "github.com/example/messaging-microservice/internal/providers/whatsapp"
-	"github.com/example/messaging-microservice/internal/worker"
-	wav "github.com/example/messaging-microservice/internal/worker/validator/whatsapp"
+	waadapter "github.com/ajayykmr/messaging-service-go/internal/adapters/whatsapp"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	waprovider "github.com/ajayykmr/messaging-service-go/internal/providers/whatsapp"
+	"github.com/ajayykmr/messaging-service-go/internal/worker"
+	wav "github.com/ajayykmr/messaging-service-go/internal/worker/validator/whatsapp"
 )
 
 func TestWhatsAppWorkerIntegrationSuccess(t *testing.T) {

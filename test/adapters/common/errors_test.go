@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	common "github.com/example/messaging-microservice/internal/adapters/common"
+	common "github.com/ajayykmr/messaging-service-go/internal/adapters/common"
 )
 
 func TestWrapTransient(t *testing.T) {

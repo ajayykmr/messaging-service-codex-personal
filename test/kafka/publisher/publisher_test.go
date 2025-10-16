@@ -9,8 +9,8 @@ import (
 
 	"github.com/rs/zerolog"
 
-	kafkapublisher "github.com/example/messaging-microservice/internal/kafka/publisher"
-	"github.com/example/messaging-microservice/internal/models"
+	kafkapublisher "github.com/ajayykmr/messaging-service-go/internal/kafka/publisher"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
 )
 
 type fakeSyncProducer struct {

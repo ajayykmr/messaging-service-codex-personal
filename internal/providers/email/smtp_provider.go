@@ -19,7 +19,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/example/messaging-microservice/internal/config"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
 )
 
 // SMTPOption configures the behaviour of the SMTP provider.

@@ -11,12 +11,12 @@ import (
 
 	"github.com/rs/zerolog"
 
-	emailadapter "github.com/example/messaging-microservice/internal/adapters/email"
-	"github.com/example/messaging-microservice/internal/config"
-	"github.com/example/messaging-microservice/internal/models"
-	emailprovider "github.com/example/messaging-microservice/internal/providers/email"
-	"github.com/example/messaging-microservice/internal/worker"
-	emailvalidator "github.com/example/messaging-microservice/internal/worker/validator/email"
+	emailadapter "github.com/ajayykmr/messaging-service-go/internal/adapters/email"
+	"github.com/ajayykmr/messaging-service-go/internal/config"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	emailprovider "github.com/ajayykmr/messaging-service-go/internal/providers/email"
+	"github.com/ajayykmr/messaging-service-go/internal/worker"
+	emailvalidator "github.com/ajayykmr/messaging-service-go/internal/worker/validator/email"
 )
 
 type stubProvider struct {

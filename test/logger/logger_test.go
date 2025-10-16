@@ -6,7 +6,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/example/messaging-microservice/internal/logger"
+	"github.com/ajayykmr/messaging-service-go/internal/logger"
 )
 
 func TestNewSetsGlobalLevel(t *testing.T) {

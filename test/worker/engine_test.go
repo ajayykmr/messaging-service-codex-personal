@@ -10,9 +10,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	common "github.com/example/messaging-microservice/internal/adapters/common"
-	"github.com/example/messaging-microservice/internal/models"
-	"github.com/example/messaging-microservice/internal/worker"
+	common "github.com/ajayykmr/messaging-service-go/internal/adapters/common"
+	"github.com/ajayykmr/messaging-service-go/internal/models"
+	"github.com/ajayykmr/messaging-service-go/internal/worker"
 )
 
 type adapterStub struct {
